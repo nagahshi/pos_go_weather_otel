@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/nagahshi/pos_go_weather_otel/internal/dto"
@@ -18,6 +19,10 @@ func NewGetWeatherUseCase(key string) *GetWeatherUseCase {
 }
 
 func (c *GetWeatherUseCase) Execute(weatherInput dto.WeatherInput) (output dto.WeatherOutput, err error) {
+	if c.key == "" {
+		return output, errors.New("chave de consulta [WEATHER_API_KEY] não encontrada")
+	}
+
 	// se houver latitude e longitude, utilizo elas
 	local := weatherInput.Latitude + "," + weatherInput.Longitude
 	if weatherInput.Latitude == "" || weatherInput.Longitude == "" {

@@ -19,15 +19,9 @@ func main() {
 
 	webserver := webSrv.NewWebServer(port)
 
-	key := os.Getenv("WEATHER_API_KEY")
-	if key == "" {
-		log.Fatal("chave de consulta [WEATHER_API_KEY] não encontrada")
-		return
-	}
-
 	handler := web.NewHandler(
 		*usecase.NewGetLatLonByCEPUseCase(),
-		*usecase.NewGetWeatherUseCase(key),
+		*usecase.NewGetWeatherUseCase(os.Getenv("WEATHER_API_KEY")),
 	)
 
 	webserver.AddHandler("POST", "/cep", handler.GetWeatherByCEP)

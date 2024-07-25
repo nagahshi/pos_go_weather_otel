@@ -1,0 +1,33 @@
+version: "3"
+services:
+  zipkin:
+    image: openzipkin/zipkin:latest
+    restart: always
+    ports:
+      - "9411:9411"
+
+  cep_api:
+    container_name: cep_api
+    build:
+      context: .
+    environment:
+      - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - PORT=8080
+      - HOST_SERVICE_B=http://weather_api:8081
+    ports:
+      - "8080:8080"
+    depends_on:
+      - zipkin
+
+  weather_api:
+    container_name: weather_api
+    build:
+      context: .
+    environment:
+      - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - PORT=8081
+      - WEATHER_API_KEY=
+    ports:
+      - "8081:8081"
+    depends_on:
+      - zipkin
