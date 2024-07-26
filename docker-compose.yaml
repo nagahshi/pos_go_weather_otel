@@ -11,8 +11,9 @@ services:
     build:
       context: .
     environment:
-      - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
       - PORT=8080
+      - SERVICE_NAME=cep_api
       - HOST_SERVICE_B=http://weather_api:8081
     ports:
       - "8080:8080"
@@ -24,8 +25,9 @@ services:
     build:
       context: .
     environment:
-      - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
       - PORT=8081
+      - SERVICE_NAME=weather_api
       - WEATHER_API_KEY=
     ports:
       - "8081:8081"
