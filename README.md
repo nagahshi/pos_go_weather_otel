@@ -45,4 +45,4 @@ Exemplo de tracing no `Serviço A` com seus eventos e atributos:
 ![spans serviço A](assets/spans_service_a.png)
 
 `Serviço B` para mesma requisição acima:
-![alt text](assets/spans_service_b.png)
+![spans serviço A](assets/spans_service_b.png)
