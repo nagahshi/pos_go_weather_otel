@@ -1,31 +1,59 @@
 package main
 
 import (
+	"context"
 	"log"
+	"net"
+	"net/http"
 	"os"
+	"time"
 
-	webSrv "github.com/nagahshi/pos_go_weather_otel/internal/infra/web/server"
-	usecase "github.com/nagahshi/pos_go_weather_otel/internal/useCase"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
+	"github.com/nagahshi/pos_go_weather_otel/internal/infra/otel"
 	"github.com/nagahshi/pos_go_weather_otel/internal/infra/web"
+	"github.com/nagahshi/pos_go_weather_otel/internal/usecase"
 )
 
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
-		log.Fatal("número de porta [PORT] não definido no ambiente")
+		log.Fatal("server port [PORT] not configured yet")
 		return
 	}
-
-	webserver := webSrv.NewWebServer(port)
+	serviceName := os.Getenv("SERVICE_NAME")
+	if serviceName == "" {
+		log.Fatal("service name [SERVICE_NAME] not configured yet")
+		return
+	}
 
 	handler := web.NewHandler(
 		*usecase.NewGetLatLonByCEPUseCase(),
 		*usecase.NewGetWeatherUseCase(os.Getenv("WEATHER_API_KEY")),
 	)
 
-	webserver.AddHandler("POST", "/cep", handler.GetWeatherByCEP)
-	webserver.AddHandler("GET", "/cep/{cep}", handler.GetWeather)
+	ctx := context.Background()
+	// Setup OTel SDK
+	otelShutdown, err := otel.SetupOTelSDK(serviceName, ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer otelShutdown(ctx)
 
-	webserver.Start()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/cep", handler.GetLocationByCEP)
+	mux.HandleFunc("/weather", handler.GetWeatherByLocal)
+
+	srv := &http.Server{
+		Addr:         ":" + port,
+		BaseContext:  func(_ net.Listener) context.Context { return ctx },
+		ReadTimeout:  time.Second,
+		WriteTimeout: 10 * time.Second,
+		Handler:      otelhttp.NewHandler(mux, "/"),
+	}
+
+	err = srv.ListenAndServe()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
