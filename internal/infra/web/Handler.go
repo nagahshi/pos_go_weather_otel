@@ -69,7 +69,7 @@ func (wh *Handler) GetLocationByCEP(w http.ResponseWriter, r *http.Request) {
 	spanValidate.AddEvent("sanitize zipcode", trace.WithAttributes(attribute.String("zipcode", data.CEP)))
 	CEP := strings.Join(re.FindAllString(data.CEP, -1), "")
 	if len(CEP) != 8 {
-		spanValidate.AddEvent("error on check validate zipcode", trace.WithAttributes(attribute.String("error", err.Error())))
+		spanValidate.AddEvent("error on check validate zipcode")
 		spanValidate.End()
 		http.Error(w, "invalid zipcode", http.StatusUnprocessableEntity)
 		return
@@ -216,7 +216,7 @@ func (wh *Handler) GetWeatherByLocal(w http.ResponseWriter, r *http.Request) {
 	ctx, spanSearch := tracer.Start(ctx, "weather_search")
 	outputWeather, err := wh.GetWeatherByLocation.Execute(ctx, input)
 	if err != nil {
-		spanSearch.AddEvent("error on search weather: cant find location")
+		spanSearch.AddEvent("error on search location", trace.WithAttributes(attribute.String("error", err.Error())))
 		spanSearch.End()
 		http.Error(w, "can not find location to weather", http.StatusNotFound)
 		return
