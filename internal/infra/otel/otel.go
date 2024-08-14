@@ -3,13 +3,16 @@ package otel
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log"
 	"os"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/zipkin"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
@@ -41,28 +44,56 @@ func SetupOTelSDK(serviceName string, ctx context.Context) (shutdown func(contex
 }
 
 // newTraceProvider - creates a new trace provider configured with the given service name.
+// func newTraceProvider(ctx context.Context, serviceName string) (*trace.TracerProvider, error) {
+// 	zipkinEndpoint := os.Getenv("ZIPKIN_ENDPOINT")
+// 	if zipkinEndpoint == "" {
+// 		return nil, errors.New("zipkin [ZIPKIN_ENDPOINT] not configured yet")
+// 	}
+
+// 	traceExporter, err := zipkin.New(zipkinEndpoint)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	res, err := resource.New(ctx, resource.WithAttributes(semconv.ServiceName(serviceName)))
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	bsp := trace.NewBatchSpanProcessor(traceExporter)
+// 	traceProvider := trace.NewTracerProvider(
+// 		trace.WithSampler(trace.AlwaysSample()),
+// 		trace.WithResource(res),
+// 		trace.WithSpanProcessor(bsp),
+// 	)
+
+// 	return traceProvider, nil
+// }
+
 func newTraceProvider(ctx context.Context, serviceName string) (*trace.TracerProvider, error) {
-	zipkinEndpoint := os.Getenv("ZIPKIN_ENDPOINT")
-	if zipkinEndpoint == "" {
-		return nil, errors.New("zipkin [ZIPKIN_ENDPOINT] not configured yet")
+	collectorEndpoint := os.Getenv("COLLECTOR_ENDPOINT")
+	if collectorEndpoint == "" {
+		return nil, errors.New("[COLLECTOR_ENDPOINT] not configured yet")
 	}
 
-	traceExporter, err := zipkin.New(zipkinEndpoint)
+	exporter, err := otlptracehttp.New(ctx, otlptracehttp.WithEndpoint(collectorEndpoint), otlptracehttp.WithInsecure())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create OTLP trace exporter: %v", err)
 	}
 
-	res, err := resource.New(ctx, resource.WithAttributes(semconv.ServiceName(serviceName)))
+	res, err := resource.New(ctx, resource.WithAttributes(
+		semconv.ServiceName(serviceName),
+	))
 	if err != nil {
-		return nil, err
+		log.Fatalf("failed to create resource: %v", err)
 	}
 
-	bsp := trace.NewBatchSpanProcessor(traceExporter)
-	traceProvider := trace.NewTracerProvider(
-		trace.WithSampler(trace.AlwaysSample()),
-		trace.WithResource(res),
-		trace.WithSpanProcessor(bsp),
+	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(res),
 	)
 
-	return traceProvider, nil
+	otel.SetTracerProvider(tracerProvider)
+
+	return tracerProvider, nil
 }

@@ -5,13 +5,21 @@ services:
     restart: always
     ports:
       - "9411:9411"
+  otel_collector:
+    image: otel/opentelemetry-collector:latest
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    command:
+      --config=/etc/otel-collector-config.yaml
+    ports:
+      - "4318:4318"
 
   cep_api:
     container_name: cep_api
     build:
       context: .
     environment:
-      - ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - COLLECTOR_ENDPOINT=otel_collector:4318
       - PORT=8080
       - SERVICE_NAME=cep_api
       - HOST_SERVICE_B=http://weather_api:8081
@@ -19,17 +27,19 @@ services:
       - "8080:8080"
     depends_on:
       - zipkin
+      - otel_collector
 
   weather_api:
     container_name: weather_api
     build:
       context: .
     environment:
-      - ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - COLLECTOR_ENDPOINT=otel_collector:4318
       - PORT=8081
       - SERVICE_NAME=weather_api
-      - WEATHER_API_KEY=
+      - WEATHER_API_KEY=bc0afb757b4047b1a91154146242307
     ports:
       - "8081:8081"
     depends_on:
       - zipkin
+      - otel_collector

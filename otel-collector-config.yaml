@@ -1,0 +1,17 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: ":4318"
+        cors:
+          allowed_origins:
+
+exporters:
+  zipkin:
+    endpoint: "http://zipkin:9411/api/v2/spans"
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [zipkin]
