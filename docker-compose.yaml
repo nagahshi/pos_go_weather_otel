@@ -37,7 +37,7 @@ services:
       - COLLECTOR_ENDPOINT=otel_collector:4318
       - PORT=8081
       - SERVICE_NAME=weather_api
-      - WEATHER_API_KEY=bc0afb757b4047b1a91154146242307
+      - WEATHER_API_KEY=
     ports:
       - "8081:8081"
     depends_on:
